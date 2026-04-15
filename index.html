@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pengingat Harian Hardi</title>
+    <!-- Tailwind CSS untuk Styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome untuk Ikon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .task-enter {
+            animation: slideIn 0.3s ease-out forwards;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen selection:bg-blue-200">
+
+    <!-- Header / Hero Section -->
+    <header class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white pb-16 pt-10 px-6 sm:px-12 shadow-lg rounded-b-3xl">
+        <div class="max-w-4xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div>
+                <h1 class="text-3xl sm:text-4xl font-bold mb-2" id="greetingText">
+                    Selamat Pagi, Hardi! 👋
+                </h1>
+                <p class="text-blue-100 text-lg" id="pendingText">
+                    Semua tugas selesai. Waktunya bersantai!
+                </p>
+            </div>
+            <div class="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20 text-center min-w-[200px]">
+                <div class="flex items-center justify-center gap-2 mb-1 text-blue-100">
+                    <i class="fas fa-calendar-alt text-sm"></i>
+                    <span class="text-sm" id="currentDate">Memuat tanggal...</span>
+                </div>
+                <div class="flex items-center justify-center gap-2">
+                    <i class="fas fa-clock text-2xl text-yellow-300"></i>
+                    <span class="text-3xl font-mono font-bold tracking-tight" id="currentTime">00:00</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-4xl mx-auto px-6 sm:px-12 -mt-8 pb-20">
+        
+        <!-- Add Task Form -->
+        <div class="bg-white rounded-2xl shadow-xl p-6 mb-8 border border-slate-100 relative z-10">
+            <h2 class="text-xl font-semibold mb-4 flex items-center gap-2 text-slate-700">
+                <i class="fas fa-bell text-indigo-500"></i>
+                Buat Pengingat Baru
+            </h2>
+            <form id="taskForm" class="flex flex-col sm:flex-row gap-4">
+                <input
+                    type="text"
+                    id="taskInput"
+                    placeholder="Apa yang perlu dilakukan Hardi?"
+                    class="flex-1 px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    required
+                />
+                <input
+                    type="datetime-local"
+                    id="dateInput"
+                    class="px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-600 transition-all"
+                />
+                <button
+                    type="submit"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-colors duration-200 shadow-md shadow-blue-500/30 whitespace-nowrap"
+                >
+                    <i class="fas fa-plus"></i> Tambah
+                </button>
+            </form>
+        </div>
+
+        <!-- Task List -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <h2 class="text-xl font-semibold flex items-center gap-2 text-slate-700">
+                    <i class="fas fa-calendar-check text-blue-500"></i>
+                    Daftar Tugas Hardi
+                </h2>
+                <span id="totalTasksCount" class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-medium">
+                    Total: 0
+                </span>
+            </div>
+
+            <div class="p-2 sm:p-4">
+                <!-- Empty State -->
+                <div id="emptyState" class="text-center py-16 px-4">
+                    <div class="bg-slate-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 border border-dashed border-slate-300">
+                        <i class="fas fa-check-circle text-4xl text-slate-300"></i>
+                    </div>
+                    <h3 class="text-lg font-medium text-slate-600">Belum ada tugas terjadwal</h3>
+                    <p class="text-slate-400 mt-1">Tambahkan aktivitasmu di atas agar waktu lebih produktif.</p>
+                </div>
+
+                <!-- Tasks Container -->
+                <ul id="taskList" class="space-y-2 hidden">
+                    <!-- Tasks will be injected here via JavaScript -->
+                </ul>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // State
+        let tasks = [];
+
+        // DOM Elements
+        const greetingText = document.getElementById('greetingText');
+        const pendingText = document.getElementById('pendingText');
+        const currentDateEl = document.getElementById('currentDate');
+        const currentTimeEl = document.getElementById('currentTime');
+        const taskForm = document.getElementById('taskForm');
+        const taskInput = document.getElementById('taskInput');
+        const dateInput = document.getElementById('dateInput');
+        const taskList = document.getElementById('taskList');
+        const emptyState = document.getElementById('emptyState');
+        const totalTasksCount = document.getElementById('totalTasksCount');
+
+        // Clock & Greeting Logic
+        function updateClock() {
+            const now = new Date();
+            
+            // Update Time
+            currentTimeEl.textContent = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+            
+            // Update Date
+            currentDateEl.textContent = now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+            
+            // Update Greeting
+            const hour = now.getHours();
+            let greeting = 'Selamat Malam';
+            if (hour < 11) greeting = 'Selamat Pagi';
+            else if (hour < 15) greeting = 'Selamat Siang';
+            else if (hour < 18) greeting = 'Selamat Sore';
+            
+            greetingText.innerHTML = `${greeting}, Hardi! 👋`;
+        }
+
+        // Initialize clock and update every second
+        updateClock();
+        setInterval(updateClock, 1000);
+
+        // Helper: Generate unique ID
+        function generateId() {
+            return Math.random().toString(36).substring(2, 9);
+        }
+
+        // Task Status Logic
+        function getTaskStatus(dateTimeStr) {
+            if (!dateTimeStr) return null;
+            
+            const taskDate = new Date(dateTimeStr);
+            const now = new Date();
+            const diffMs = taskDate - now;
+            
+            if (diffMs < 0) {
+                return { text: 'Terlewat', color: 'text-red-500 bg-red-100' };
+            }
+            
+            const diffHours = diffMs / (1000 * 60 * 60);
+            if (diffHours < 1) {
+                return { text: 'Segera', color: 'text-orange-600 bg-orange-100' };
+            }
+            if (now.toDateString() === taskDate.toDateString()) {
+                return { text: 'Hari Ini', color: 'text-blue-600 bg-blue-100' };
+            }
+            
+            return { 
+                text: taskDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }), 
+                color: 'text-gray-600 bg-gray-100' 
+            };
+        }
+
+        // Render Tasks
+        function renderTasks() {
+            // Sort tasks: dates first, then by date, no dates at bottom
+            tasks.sort((a, b) => {
+                if (a.dateTime && b.dateTime) return new Date(a.dateTime) - new Date(b.dateTime);
+                if (a.dateTime) return -1;
+                if (b.dateTime) return 1;
+                return 0;
+            });
+
+            const pendingCount = tasks.filter(t => !t.completed).length;
+            totalTasksCount.textContent = `Total: ${tasks.length}`;
+            
+            if (pendingCount > 0) {
+                pendingText.textContent = `Kamu memiliki ${pendingCount} tugas yang menunggu untuk diselesaikan.`;
+            } else {
+                pendingText.textContent = 'Semua tugas selesai. Waktunya bersantai!';
+            }
+
+            if (tasks.length === 0) {
+                emptyState.classList.remove('hidden');
+                taskList.classList.add('hidden');
+                taskList.innerHTML = '';
+            } else {
+                emptyState.classList.add('hidden');
+                taskList.classList.remove('hidden');
+                taskList.innerHTML = '';
+
+                tasks.forEach(task => {
+                    const status = getTaskStatus(task.dateTime);
+                    const li = document.createElement('li');
+                    
+                    // Styling conditionally based on completion
+                    const bgClass = task.completed ? 'bg-slate-50 border-slate-100 opacity-60' : 'bg-white border-slate-200 hover:border-blue-300 hover:shadow-md';
+                    const iconClass = task.completed ? 'text-green-500 fa-solid fa-check-circle' : 'text-slate-300 hover:text-blue-500 fa-regular fa-circle';
+                    const textClass = task.completed ? 'text-slate-500 line-through' : 'text-slate-800';
+                    
+                    let dateTimeHTML = '';
+                    if (task.dateTime) {
+                        const timeString = new Date(task.dateTime).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+                        let statusHTML = '';
+                        
+                        if (!task.completed && status) {
+                            statusHTML = `<span class="text-xs px-2 py-0.5 rounded-md font-medium ${status.color}">${status.text}</span>`;
+                        }
+
+                        dateTimeHTML = `
+                            <div class="flex items-center gap-3 mt-1">
+                                <span class="text-sm text-slate-500 flex items-center gap-1">
+                                    <i class="fas fa-clock text-xs"></i> ${timeString}
+                                </span>
+                                ${statusHTML}
+                            </div>
+                        `;
+                    }
+
+                    li.className = `task-enter group flex items-center justify-between p-4 rounded-xl border transition-all duration-200 ${bgClass}`;
+                    li.innerHTML = `
+                        <div class="flex items-center gap-4 flex-1 min-w-0">
+                            <button onclick="toggleTask('${task.id}')" class="flex-shrink-0 transition-colors cursor-pointer outline-none">
+                                <i class="${iconClass} text-2xl"></i>
+                            </button>
+                            
+                            <div class="flex-1 min-w-0">
+                                <p class="text-lg font-medium truncate ${textClass}">
+                                    ${task.title}
+                                </p>
+                                ${dateTimeHTML}
+                            </div>
+                        </div>
+
+                        <button
+                            onclick="deleteTask('${task.id}')"
+                            class="ml-4 p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all outline-none"
+                            title="Hapus Tugas"
+                        >
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    `;
+                    taskList.appendChild(li);
+                });
+            }
+        }
+
+        // Add Task Event
+        taskForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const title = taskInput.value.trim();
+            if (!title) return;
+
+            const newTask = {
+                id: generateId(),
+                title: title,
+                dateTime: dateInput.value || null,
+                completed: false
+            };
+
+            tasks.push(newTask);
+            
+            // Reset form
+            taskInput.value = '';
+            dateInput.value = '';
+            
+            renderTasks();
+        });
+
+        // Toggle Completion
+        window.toggleTask = function(id) {
+            const task = tasks.find(t => t.id === id);
+            if (task) {
+                task.completed = !task.completed;
+                renderTasks();
+            }
+        };
+
+        // Delete Task
+        window.deleteTask = function(id) {
+            tasks = tasks.filter(t => t.id !== id);
+            renderTasks();
+        };
+
+        // Initial Render
+        renderTasks();
+
+    </script>
+</body>
+</html>
